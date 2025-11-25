@@ -111,8 +111,8 @@ class ShellHookReceiver:
             
             logger.info(f"Shell Hook receiver started on {self.socket_path}")
             
-            async with self.server:
-                await self.server.serve_forever()
+            # Server will run in background, no need to call serve_forever()
+            # The server is already serving after start_unix_server returns
         
         except Exception as e:
             logger.error(f"Failed to start Shell Hook receiver: {e}")

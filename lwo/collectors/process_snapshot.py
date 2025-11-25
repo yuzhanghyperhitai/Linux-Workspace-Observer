@@ -115,9 +115,14 @@ class ProcessSnapshotCollector:
         
         logger.info(f"Process snapshot collector started (interval: {self.interval}s)")
         
+        # Wait a bit before first collection to avoid blocking daemon startup
+        await asyncio.sleep(1)
+        
         while True:
             try:
-                processes = self.collect_snapshot()
+                # Run blocking collection in thread pool to avoid blocking event loop
+                loop = asyncio.get_event_loop()
+                processes = await loop.run_in_executor(None, self.collect_snapshot)
                 
                 if processes:
                     self.save_snapshot(processes)

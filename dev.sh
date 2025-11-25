@@ -8,6 +8,10 @@ echo "=== LWO Development Environment ==="
 export LWO_CONFIG="$(pwd)/lwo.toml"
 echo "✓ Config file: $LWO_CONFIG"
 
+# Export socket path for development
+export LWO_SOCKET_PATH="$(pwd)/log/data/shell.sock"
+echo "✓ Socket path: $LWO_SOCKET_PATH"
+
 # Setup Shell Hook for current session only (not persistent)
 echo "✓ Loading Shell Hook for current session..."
 

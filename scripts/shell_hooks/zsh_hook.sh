@@ -1,8 +1,9 @@
 #!/bin/bash
 # LWO Shell Hook for Zsh
 
-# Socket path
-LWO_SOCKET="$HOME/.local/share/lwo/shell.sock"
+# Socket path - use environment variable or default
+# For development: export LWO_SOCKET_PATH="./log/data/shell.sock"
+LWO_SOCKET="${LWO_SOCKET_PATH:-$HOME/.local/share/lwo/shell.sock}"
 
 # Variables to track command execution
 _lwo_cmd_start_time=0
