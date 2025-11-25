@@ -1,0 +1,17 @@
+[project]
+name = "lwo"
+version = "0.1.0"
+description = "Linux Workspace Observer - Intelligent work status monitoring assistant"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "click>=8.1.7",
+    "sqlalchemy>=2.0.23",
+    "psycopg2-binary>=2.9.9",
+    "python-dotenv>=1.0.0",
+    "psutil>=5.9.6",
+    "watchdog>=4.0.0",
+    "openai>=1.12.0",
+    "toml>=0.10.2",
+    "python-dateutil>=2.8.2",
+]
