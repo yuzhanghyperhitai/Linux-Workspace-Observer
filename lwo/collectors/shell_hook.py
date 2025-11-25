@@ -93,9 +93,23 @@ class ShellHookReceiver:
             self.git_collector.on_pwd_change(pwd)
             
             logger.debug(f"Recorded command: {sanitized_command} (exit={exit_code})")
+            
+            # Trigger anomaly detection (event-driven)
+            await self._check_anomalies()
         
         except Exception as e:
             logger.error(f"Failed to process command data: {e}")
+    
+    async def _check_anomalies(self):
+        """Check for anomalies after receiving command."""
+        try:
+            # Get daemon instance to access anomaly monitor
+            from lwo.daemon import Daemon
+            daemon = Daemon.get_instance()
+            if daemon and hasattr(daemon, 'anomaly_monitor'):
+                await daemon.anomaly_monitor.on_command_received()
+        except Exception as e:
+            logger.debug(f"Anomaly check skipped: {e}")
     
     async def start(self):
         """Start the Unix socket server."""

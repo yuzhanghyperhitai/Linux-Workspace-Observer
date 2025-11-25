@@ -15,9 +15,13 @@ process_snapshot_interval = 60
 file_watch_extensions = [".py", ".js", ".ts", ".java", ".c", ".cpp", ".go", ".rs", ".md", ".toml", ".yaml", ".json"]
 
 [openai]
-# API key is read from environment variable OPENAI_API_KEY
+api_key = "your-openai-api-key-here"
 model = "gpt-4o"
-base_url = "https://api.openai.com/v1"
+# base_url = "https://api.openai.com/v1"  # Optional: for custom endpoints
+
+[google]
+api_key = "your-google-api-key-here"
+model = "gemini-2.5-flash-lite"
 
 [reporting]
 daily_report_time = "18:00"

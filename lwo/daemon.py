@@ -8,17 +8,31 @@ from typing import Optional
 
 from lwo.config import get_config
 from lwo.collectors.shell_hook import ShellHookReceiver
+from lwo.storage.database import get_database
 from lwo.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
 
-class LWODaemon:
+class Daemon: # Renamed from LWODaemon
     """LWO daemon process manager."""
+    
+    _instance = None # Added for singleton pattern
+    
+    @classmethod
+    def get_instance(cls): # Added for singleton pattern
+        """Get daemon instance.
+        
+        Returns:
+            Daemon instance or None
+        """
+        return cls._instance
     
     def __init__(self):
         """Initialize daemon."""
+        Daemon._instance = self # Set instance for singleton
         self.config = get_config()
+        self.db = get_database() # Added database initialization
         self.pid_file = self.config.data_dir / 'lwo.pid'
         self.log_file = self.config.data_dir / 'lwo.log'
         
@@ -94,10 +108,10 @@ class LWODaemon:
         self.event_aggregator = EventAggregator()
         asyncio.create_task(self.event_aggregator.run())
         
-        # Start Work Status Analyzer
-        from lwo.inference.analyzer import WorkStatusAnalyzer
-        self.analyzer = WorkStatusAnalyzer()
-        asyncio.create_task(self.analyzer.run())
+        # Initialize Anomaly Monitor (event-driven, not polling)
+        from lwo.inference.anomaly_monitor import AnomalyMonitor
+        self.anomaly_monitor = AnomalyMonitor()
+        # Note: AnomalyMonitor is event-driven, triggered by collectors
         
         logger.info("All collectors started")
     
@@ -184,11 +198,11 @@ class LWODaemon:
 
 def start_daemon():
     """Start LWO daemon."""
-    daemon = LWODaemon()
+    daemon = Daemon()
     daemon.start()
 
 
 def stop_daemon():
     """Stop LWO daemon."""
-    daemon = LWODaemon()
+    daemon = Daemon()
     daemon.stop()
