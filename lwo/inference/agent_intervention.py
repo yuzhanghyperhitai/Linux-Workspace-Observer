@@ -78,17 +78,12 @@ class AIAgentIntervention:
         self.config = get_config()
         self.db = get_database()
         
-        # Get Google API key from config
-        api_key = self.config.get('google', 'api_key')
-        model = self.config.get('google', 'model', 'gemini-2.5-flash-lite')
+        # Get AI configuration (unified config section)
+        api_key = self.config.get('ai', 'api_key')
+        model = self.config.get('ai', 'model', 'gemini-2.5-flash-lite')
         
         if not api_key:
-            # Fallback to environment variable
-            import os
-            api_key = os.environ.get('GOOGLE_API_KEY')
-        
-        if not api_key:
-            raise ValueError("Google API key not configured (check [google] section in config or GOOGLE_API_KEY env var)")
+            raise ValueError("AI API key not configured. Please set 'api_key' in [ai] section of config file.")
         
         # Initialize Gemini model
         model_instance = init_chat_model(
@@ -189,6 +184,7 @@ You MUST respond with a structured format containing:
             structured = result.get("structured_response")  # AnomalyAnalysis object
             
             if not structured:
+                logger.error(f"No structured response from agent:{result}")
                 raise ValueError("No structured response from agent")
             
             # Build analysis dict
@@ -216,7 +212,7 @@ You MUST respond with a structured format containing:
             return analysis
         
         except Exception as e:
-            logger.error(f"Failed to analyze anomaly with AI Agent: {e}")
+            logger.error(f"Failed to analyze anomaly with AI Agent: {e}, {result}")
             return {
                 'anomaly_type': anomaly['type'],
                 'error': str(e),

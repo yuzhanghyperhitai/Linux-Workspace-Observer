@@ -1,8 +1,10 @@
 """CLI commands for LWO."""
 
-from sqlalchemy import text
+import time
+from datetime import datetime
 
 from lwo.storage.database import get_database
+from lwo.storage.models import Analysis, ShellCommand, GitContext, AggregatedEvent
 from lwo.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -10,9 +12,6 @@ logger = setup_logger(__name__)
 
 def report_command():
     """Display current work status report."""
-    import time
-    from datetime import datetime
-    
     db = get_database()
     
     print("\n" + "="*60)
@@ -21,25 +20,21 @@ def report_command():
     
     # Get latest analysis
     with db.session() as session:
-        # Latest AI analysis
-        result = session.execute(
-            text("""
-            SELECT ts, status, summary, confidence
-            FROM analyses
-            ORDER BY ts DESC
-            LIMIT 1
-            """)
-        ).fetchone()
+        # Latest AI analysis using ORM
+        analysis = (
+            session.query(Analysis)
+            .order_by(Analysis.ts.desc())
+            .first()
+        )
         
-        if result:
-            ts, status, summary, confidence = result
-            dt = datetime.fromtimestamp(ts)
+        if analysis:
+            dt = datetime.fromtimestamp(analysis.ts)
             
             print(f"📊 Analysis Time: {dt.strftime('%Y-%m-%d %H:%M:%S')}")
-            print(f"🎯 Work Status:   {status}")
-            print(f"📝 Summary:       {summary}")
-            if confidence:
-                print(f"✓  Confidence:    {confidence:.0%}")
+            print(f"🎯 Work Status:   {analysis.status}")
+            print(f"📝 Summary:       {analysis.summary}")
+            if analysis.confidence:
+                print(f"✓  Confidence:    {analysis.confidence:.0%}")
             print()
         else:
             print("⚠️  No AI analysis available yet.")
@@ -49,47 +44,42 @@ def report_command():
         # Recent activity stats (last 10 minutes)
         ten_min_ago = int(time.time()) - 600
         
-        cmd_count = session.execute(
-            text("SELECT COUNT(*) FROM shell_commands WHERE ts >= :ts"),
-            {'ts': ten_min_ago}
-        ).scalar()
+        # Count commands using ORM
+        cmd_count = (
+            session.query(ShellCommand)
+            .filter(ShellCommand.ts >= ten_min_ago)
+            .count()
+        )
         
-        # Get Git context
-        git_result = session.execute(
-            text("""
-            SELECT repo_path, branch, branch_type
-            FROM git_contexts
-            ORDER BY ts DESC
-            LIMIT 1
-            """)
-        ).fetchone()
+        # Get latest Git context
+        git_context = (
+            session.query(GitContext)
+            .order_by(GitContext.ts.desc())
+            .first()
+        )
         
-        # Get aggregated events
-        event_results = session.execute(
-            text("""
-            SELECT event_type, description
-            FROM aggregated_events
-            WHERE start_time >= :ts
-            ORDER BY start_time DESC
-            LIMIT 3
-            """),
-            {'ts': ten_min_ago}
-        ).fetchall()
+        # Get recent aggregated events
+        events = (
+            session.query(AggregatedEvent)
+            .filter(AggregatedEvent.start_time >= ten_min_ago)
+            .order_by(AggregatedEvent.start_time.desc())
+            .limit(3)
+            .all()
+        )
     
     print("-" * 60)
     print("RECENT ACTIVITY (Last 10 minutes)")
     print("-" * 60)
     print(f"Commands executed: {cmd_count or 0}")
     
-    if git_result:
-        repo_path, branch, branch_type = git_result
-        print(f"Current Git branch: {branch} ({branch_type})")
-        print(f"Repository: {repo_path}")
+    if git_context:
+        print(f"Current Git branch: {git_context.branch} ({git_context.branch_type})")
+        print(f"Repository: {git_context.repo_path}")
     
-    if event_results:
+    if events:
         print("\nActivity Patterns:")
-        for event_type, description in event_results:
-            print(f"  • {description}")
+        for event in events:
+            print(f"  • {event.description}")
     
     print("\n" + "="*60 + "\n")
 

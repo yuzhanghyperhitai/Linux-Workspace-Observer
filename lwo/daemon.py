@@ -119,8 +119,23 @@ class Daemon: # Renamed from LWODaemon
         """Stop all data collectors."""
         logger.info("Stopping data collectors...")
         
-        if self.shell_hook_receiver:
-            await self.shell_hook_receiver.stop()
+        # Cancel all background tasks
+        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+        for task in tasks:
+            task.cancel()
+        
+        # Wait briefly for tasks to cancel
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Stop shell hook receiver
+        if hasattr(self, 'shell_hook_receiver') and self.shell_hook_receiver:
+            try:
+                if self.shell_hook_receiver.server:
+                    self.shell_hook_receiver.server.close()
+                    await self.shell_hook_receiver.server.wait_closed()
+            except Exception as e:
+                logger.debug(f"Error stopping shell hook: {e}")
         
         logger.info("All collectors stopped")
     

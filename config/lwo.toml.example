@@ -1,28 +1,23 @@
 [general]
-data_dir = "~/.local/share/lwo"
-log_level = "INFO"
+data_dir = "./log/data"
+log_level = "DEBUG"
 
 [database]
 host = "localhost"
 port = 5432
 name = "lwo"
-user = "lwo_user"
-# Password is read from environment variable LWO_DB_PASSWORD
+user = "postgres"
+# Password can be set here or via LWO_DB_PASSWORD environment variable
+# password = "your-password-here"
 
 [collectors]
 process_snapshot_interval = 60
-# file_watch_dirs are automatically discovered by AI
-file_watch_extensions = [".py", ".js", ".ts", ".java", ".c", ".cpp", ".go", ".rs", ".md", ".toml", ".yaml", ".json"]
 
-[openai]
-api_key = "your-openai-api-key-here"
-model = "gpt-4o"
-# base_url = "https://api.openai.com/v1"  # Optional: for custom endpoints
-
-[google]
+[ai]
+# Google Gemini configuration
 api_key = "your-google-api-key-here"
 model = "gemini-2.5-flash-lite"
 
 [reporting]
 daily_report_time = "18:00"
-report_output_dir = "~/lwo-reports"
+report_output_dir = "./log/reports"

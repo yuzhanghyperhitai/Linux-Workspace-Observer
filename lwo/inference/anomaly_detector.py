@@ -41,9 +41,13 @@ class AnomalyDetector:
         
         # Query recent commands using ORM
         with self.db.session() as session:
-            recent_commands = session.query(ShellCommand).filter(
-                ShellCommand.ts >= cutoff_time
-            ).order_by(ShellCommand.ts.desc()).limit(50).all()
+            recent_commands = (
+                session.query(ShellCommand)
+                .filter(ShellCommand.ts >= cutoff_time)
+                .order_by(ShellCommand.ts.desc())
+                .limit(50)
+                .all()
+            )
             
             if len(recent_commands) < 3:
                 return None
