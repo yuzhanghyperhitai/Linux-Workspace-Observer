@@ -3,7 +3,7 @@
 import time
 import asyncio
 from pathlib import Path
-from typing import List, Set
+from typing import List, Set, Dict
 from collections import defaultdict
 
 from watchdog.observers import Observer
@@ -56,8 +56,21 @@ class FileMonitor(FileSystemEventHandler):
         """
         path = Path(filepath)
         
-        # Skip hidden files and directories
-        if any(part.startswith('.') for part in path.parts):
+        # Directories to skip (dependencies, build artifacts, caches)
+        skip_dirs = {
+            'node_modules', '__pycache__', '.venv', 'venv',
+            '.git', '.pytest_cache', '.mypy_cache', '.tox',
+            'dist', 'build', 'target', 'out', 'bin',
+            '.next', '.nuxt', '.cache', 'vendor',
+            'coverage', '.coverage', '.eggs'
+        }
+        
+        # Skip if any part of the path matches skip directories
+        if any(part in skip_dirs for part in path.parts):
+            return False
+        
+        # Skip hidden files and directories (starting with .)
+        if any(part.startswith('.') and part not in {'.', '..'} for part in path.parts):
             return False
         
         # Check extension
