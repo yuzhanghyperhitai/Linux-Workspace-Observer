@@ -56,7 +56,7 @@ class ProcessSnapshotCollector:
             memory_mb = memory_info.rss / 1024 / 1024
             
             # High CPU or memory usage
-            if cpu_percent > 5.0 or memory_mb > 100:
+            if cpu_percent > 25.0 or memory_mb > 1024:
                 return True
             
             return False

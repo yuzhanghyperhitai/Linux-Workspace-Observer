@@ -113,6 +113,20 @@ class Daemon: # Renamed from LWODaemon
         self.anomaly_monitor = AnomalyMonitor()
         # Note: AnomalyMonitor is event-driven, triggered by collectors
         
+        # Discover directories and start file monitor
+        from lwo.collectors.directory_discovery import DirectoryDiscovery
+        from lwo.collectors.file_monitor import FileMonitor
+        
+        discovery = DirectoryDiscovery()
+        monitored_dirs = discovery.discover_directories(lookback_days=7, max_dirs=5)
+        
+        if monitored_dirs:
+            self.file_monitor = FileMonitor(monitored_dirs)
+            await self.file_monitor.start()
+        else:
+            logger.warning("No directories discovered, file monitoring disabled")
+            self.file_monitor = None
+        
         logger.info("All collectors started")
     
     async def stop_collectors(self):
@@ -127,6 +141,10 @@ class Daemon: # Renamed from LWODaemon
         # Wait briefly for tasks to cancel
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Stop file monitor
+        if hasattr(self, 'file_monitor') and self.file_monitor:
+            await self.file_monitor.stop()
         
         # Stop shell hook receiver
         if hasattr(self, 'shell_hook_receiver') and self.shell_hook_receiver:

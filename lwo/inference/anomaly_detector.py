@@ -53,15 +53,16 @@ class AnomalyDetector:
                 return None
             
             # Count command repetitions
-            command_counts = defaultdict(int)
-            failed_commands = []
+            command_counts = defaultdict(lambda: {'count': 0, 'pwds': set(), 'failed': []})
             
             for cmd in recent_commands:
                 sanitized = cmd.sanitized_command or cmd.command
-                command_counts[sanitized] += 1
+                command_counts[sanitized]['count'] += 1
+                if cmd.pwd:
+                    command_counts[sanitized]['pwds'].add(cmd.pwd)
                 
                 if cmd.exit_code != 0:
-                    failed_commands.append({
+                    command_counts[sanitized]['failed'].append({
                         'command': sanitized,
                         'exit_code': cmd.exit_code,
                         'ts': cmd.ts,
@@ -69,16 +70,25 @@ class AnomalyDetector:
                     })
             
             # Find most repeated command
-            most_common = max(command_counts.items(), key=lambda x: x[1])
-            command, count = most_common
+            most_common = max(command_counts.items(), key=lambda x: x[1]['count'])
+            command, data = most_common
+            count = data['count']
             
             # Trigger if repeated 3+ times
             if count >= 3:
+                # Get working directory (prefer from failed commands, fallback to any pwd)
+                pwd = None
+                if data['failed']:
+                    pwd = data['failed'][0]['pwd']
+                elif data['pwds']:
+                    pwd = list(data['pwds'])[0]
+                
                 return {
                     'type': 'repeated_command',
                     'command': command,
                     'count': count,
-                    'failed_commands': failed_commands,
+                    'pwd': pwd,
+                    'failed_commands': data['failed'],
                     'time_window': lookback_seconds,
                     'severity': 'high' if count >= 5 else 'medium'
                 }

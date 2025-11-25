@@ -41,20 +41,23 @@ class AgentLogCallback(BaseCallbackHandler):
         """Log when a tool starts."""
         tool_name = serialized.get('name', 'unknown')
         logger.info(f"🔧 Tool call: {tool_name}")
-        logger.debug(f"   Input: {input_str[:100]}...")
+        logger.info(f"   Arguments: {input_str}")
     
     def on_tool_end(self, output: Any, **kwargs) -> None:
         """Log when a tool ends."""
-        logger.info("✅ Tool completed")
         # Extract output content safely
-        try:
-            if hasattr(output, 'content'):
-                content = str(output.content)
-            else:
-                content = str(output)
-            logger.debug(f"   Output: {content[:100]}...")
-        except Exception:
-            logger.debug("   Output: (unable to display)")
+        content = ""
+        if hasattr(output, 'content'):
+            content = str(output.content)
+        else:
+            content = str(output)
+        
+        # Truncate long output
+        if len(content) > 200:
+            content = content[:200] + "... (truncated)"
+        
+        logger.info("✅ Tool completed")
+        logger.info("   Result: %s" % content)
     
     def on_tool_error(self, error: Exception, **kwargs) -> None:
         """Log tool errors."""
@@ -62,8 +65,8 @@ class AgentLogCallback(BaseCallbackHandler):
     
     def on_agent_action(self, action: AgentAction, **kwargs) -> None:
         """Log agent actions."""
-        logger.info(f"🎯 Agent action: {action.tool}")
-        logger.debug(f"   Tool input: {action.tool_input}")
+        logger.info(f"🎯 Agent decided to call: {action.tool}")
+        logger.info(f"   With arguments: {action.tool_input}")
     
     def on_agent_finish(self, finish: AgentFinish, **kwargs) -> None:
         """Log when agent finishes."""
@@ -86,7 +89,7 @@ class AIAgentIntervention:
             raise ValueError("AI API key not configured. Please set 'api_key' in [ai] section of config file.")
         
         # Initialize Gemini model
-        model_instance = init_chat_model(
+        llm = init_chat_model(
             f"google_genai:{model}",
             api_key=api_key,
             temperature=0.3
@@ -100,7 +103,7 @@ class AIAgentIntervention:
         
         # Create Agent with structured output and verbose logging
         self.agent = create_agent(
-            model=model_instance,
+            model=llm,
             tools=AGENT_TOOLS,
             response_format=ToolStrategy(AnomalyAnalysis),
             system_prompt=system_prompt
@@ -122,6 +125,23 @@ Your role:
 3. Understand what the user is trying to do and what problems they're facing
 4. Provide helpful analysis and suggestions
 
+CRITICAL - Tool Usage Guidelines:
+1. **Read tool descriptions carefully**: Each tool has specific requirements for its parameters
+2. **Infer missing information**: Extract required parameters from the anomaly context
+   - Working directories are mentioned in error messages (e.g., "Exit code X in /path/to/dir")
+   - File names are in the command being analyzed
+   - Combine context clues to construct complete parameters
+3. **Follow parameter constraints**: 
+   - If a tool requires absolute paths, construct them from directory + filename
+   - If a tool requires specific formats, adhere to them strictly
+   - Check tool documentation for examples of correct usage
+4. **Don't assume**: If information is missing and cannot be inferred, note it in your analysis
+
+Example of good parameter inference:
+- Anomaly says: "Exit code 1 in /home/user/project" + "vim test.py"
+- Tool requires: absolute file path
+- You should use: "/home/user/project/test.py" (directory + filename)
+
 Available tools:
 - read_file: Read source code or configuration files
 - get_error_logs: Get details of failed commands
@@ -135,14 +155,10 @@ Guidelines:
 - Be thorough: Investigate root causes, not just symptoms
 - Be helpful: Provide specific, actionable suggestions
 - Be concise: Keep analysis focused and to the point
+- Be precise: Construct tool parameters carefully from context
 
-You MUST respond with a structured format containing:
-- situation: Brief description of what user is doing
-- issue: Main problem identified
-- root_cause: Likely cause of the issue
-- analysis: Detailed analysis
-- suggestions: List of specific actionable suggestions
-- confidence: Your confidence score (0.0-1.0)"""
+You MUST respond with structured output containing:
+- situation, issue, root_cause, analysis, suggestions, confidence"""
     
     async def analyze_anomaly(self, anomaly: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze an anomaly using AI Agent.
@@ -233,15 +249,21 @@ You MUST respond with a structured format containing:
         if anomaly_type == 'repeated_command':
             command = anomaly.get('command', 'unknown')
             count = anomaly.get('count', 0)
+            pwd = anomaly.get('pwd')
             failed = anomaly.get('failed_commands', [])
             
             msg = f"ANOMALY DETECTED: User has executed the same command {count} times in the last {anomaly.get('time_window', 300)} seconds.\n\n"
-            msg += f"Repeated command: {command}\n\n"
+            msg += f"Repeated command: {command}\n"
+            
+            # Always include pwd if available
+            if pwd:
+                msg += f"Working directory: {pwd}\n"
+                msg += f"For file operations, use ABSOLUTE paths: {pwd}/filename\n"
             
             if failed:
-                msg += f"Failed executions ({len(failed)}):\n"
+                msg += f"\nFailed executions ({len(failed)}):\n"
                 for f in failed[:3]:
-                    msg += f"  - Exit code {f['exit_code']} in {f['pwd']}\n"
+                    msg += f"  - Exit code {f['exit_code']} at {f.get('pwd', 'unknown')}\n"
             
             msg += "\nPlease investigate what the user is trying to do and why this command keeps failing or being repeated."
         
