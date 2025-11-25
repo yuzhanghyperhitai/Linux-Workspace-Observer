@@ -94,6 +94,11 @@ class LWODaemon:
         self.event_aggregator = EventAggregator()
         asyncio.create_task(self.event_aggregator.run())
         
+        # Start Work Status Analyzer
+        from lwo.inference.analyzer import WorkStatusAnalyzer
+        self.analyzer = WorkStatusAnalyzer()
+        asyncio.create_task(self.analyzer.run())
+        
         logger.info("All collectors started")
     
     async def stop_collectors(self):

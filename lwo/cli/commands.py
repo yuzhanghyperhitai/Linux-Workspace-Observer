@@ -1,5 +1,7 @@
 """CLI commands for LWO."""
 
+from sqlalchemy import text
+
 from lwo.storage.database import get_database
 from lwo.utils.logger import setup_logger
 
@@ -8,38 +10,88 @@ logger = setup_logger(__name__)
 
 def report_command():
     """Display current work status report."""
+    import time
+    from datetime import datetime
+    
     db = get_database()
     
-    print("\n=== LWO Work Status Report ===\n")
+    print("\n" + "="*60)
+    print("         LWO WORK STATUS REPORT")
+    print("="*60 + "\n")
     
     # Get latest analysis
     with db.session() as session:
+        # Latest AI analysis
         result = session.execute(
-            """
+            text("""
             SELECT ts, status, summary, confidence
             FROM analyses
             ORDER BY ts DESC
             LIMIT 1
-            """
+            """)
         ).fetchone()
         
         if result:
-            import time
-            from datetime import datetime
-            
             ts, status, summary, confidence = result
             dt = datetime.fromtimestamp(ts)
             
-            print(f"Time: {dt.strftime('%Y-%m-%d %H:%M:%S')}")
-            print(f"Status: {status}")
-            print(f"Summary: {summary}")
+            print(f"📊 Analysis Time: {dt.strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"🎯 Work Status:   {status}")
+            print(f"📝 Summary:       {summary}")
             if confidence:
-                print(f"Confidence: {confidence:.2f}")
+                print(f"✓  Confidence:    {confidence:.0%}")
+            print()
         else:
-            print("No analysis data available yet.")
-            print("The AI analysis will be available after collecting enough activity data.")
+            print("⚠️  No AI analysis available yet.")
+            print("   The analyzer runs every 10 minutes after collecting data.")
+            print()
+        
+        # Recent activity stats (last 10 minutes)
+        ten_min_ago = int(time.time()) - 600
+        
+        cmd_count = session.execute(
+            text("SELECT COUNT(*) FROM shell_commands WHERE ts >= :ts"),
+            {'ts': ten_min_ago}
+        ).scalar()
+        
+        # Get Git context
+        git_result = session.execute(
+            text("""
+            SELECT repo_path, branch, branch_type
+            FROM git_contexts
+            ORDER BY ts DESC
+            LIMIT 1
+            """)
+        ).fetchone()
+        
+        # Get aggregated events
+        event_results = session.execute(
+            text("""
+            SELECT event_type, description
+            FROM aggregated_events
+            WHERE start_time >= :ts
+            ORDER BY start_time DESC
+            LIMIT 3
+            """),
+            {'ts': ten_min_ago}
+        ).fetchall()
     
-    print()
+    print("-" * 60)
+    print("RECENT ACTIVITY (Last 10 minutes)")
+    print("-" * 60)
+    print(f"Commands executed: {cmd_count or 0}")
+    
+    if git_result:
+        repo_path, branch, branch_type = git_result
+        print(f"Current Git branch: {branch} ({branch_type})")
+        print(f"Repository: {repo_path}")
+    
+    if event_results:
+        print("\nActivity Patterns:")
+        for event_type, description in event_results:
+            print(f"  • {description}")
+    
+    print("\n" + "="*60 + "\n")
 
 
 def daily_report():
