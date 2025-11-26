@@ -17,12 +17,19 @@ uses an OpenAI Agent to infer the user's **work intent**, and outputs
     branch intent (e.g., `fix/`, `feat/`)\
 -   **File Monitoring**: Intelligently discovers project directories and
     monitors file changes (based on inotify)
+-   **Host Log Monitoring**: Real-time monitoring of system logs (journalctl)
+    to detect service failures and system anomalies.
 
 ### Intelligent Analysis
 
--   **OpenAI Agent**: Uses Gemini to analyze work status\
+-   **AI Agent Core**: Powered by **LangChain**, the agent autonomously
+    utilizes tools (Log Analyzer, Git Diff, Command History) to investigate
+    root causes.
+-   **Proactive Anomaly Detection**: Real-time detection of abnormal patterns
+    (Repeated Commands, File Thrashing, High Error Rate) to trigger
+    immediate AI intervention.
 -   **Automatic Inference**: Identifies current state (Coding /
-    Debugging / Learning / Idle)\
+    Debugging / Learning / Idle) based on multi-dimensional data.
 -   **Smart Directory Discovery**: AI automatically analyzes and
     recommends project directories to monitor
 
