@@ -121,3 +121,17 @@ class DiscoveredDir(Base):
     is_active = Column(Boolean, default=True, index=True)
     ai_reasoning = Column(Text)
     created_at = Column(TIMESTAMP, server_default=func.now())
+
+
+class HostLog(Base):
+    """Host-level log entries from journalctl or syslog."""
+    __tablename__ = 'host_logs'
+    
+    id = Column(Integer, primary_key=True)
+    ts = Column(BigInteger, nullable=False, index=True)
+    level = Column(Text, nullable=False)  # ERROR, WARN, INFO
+    service = Column(Text, nullable=False)  # systemd, kernel, etc.
+    message = Column(Text, nullable=False)
+    raw_line = Column(Text, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+

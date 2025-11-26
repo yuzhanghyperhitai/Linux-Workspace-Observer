@@ -84,3 +84,18 @@ CREATE TABLE IF NOT EXISTS discovered_dirs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_discovered_dirs_is_active ON discovered_dirs(is_active);
+
+-- Host logs table (for journalctl/syslog monitoring)
+CREATE TABLE IF NOT EXISTS host_logs (
+    id SERIAL PRIMARY KEY,
+    ts BIGINT NOT NULL,
+    level TEXT NOT NULL,
+    service TEXT NOT NULL,
+    message TEXT NOT NULL,
+    raw_line TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_host_logs_ts ON host_logs(ts);
+CREATE INDEX IF NOT EXISTS idx_host_logs_level ON host_logs(level);
+CREATE INDEX IF NOT EXISTS idx_host_logs_service ON host_logs(service);

@@ -2,7 +2,7 @@
 
 import time
 import asyncio
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from langchain.chat_models import init_chat_model
 from langchain.agents import create_agent
@@ -142,14 +142,6 @@ Example of good parameter inference:
 - Tool requires: absolute file path
 - You should use: "/home/user/project/test.py" (directory + filename)
 
-Available tools:
-- read_file: Read source code or configuration files
-- get_error_logs: Get details of failed commands
-- get_git_diff: See code changes
-- get_recent_commands: View command history
-- list_directory: Explore directory structure
-- search_in_file: Find specific content in files
-
 Guidelines:
 - Be proactive: Use tools to gather information
 - Be thorough: Investigate root causes, not just symptoms
@@ -199,8 +191,13 @@ You MUST respond with structured output containing:
             # Extract structured response
             structured = result.get("structured_response")  # AnomalyAnalysis object
             
+            # Fallback: extract JSON from markdown if structured_response is None
             if not structured:
-                logger.error(f"No structured response from agent:{result}")
+                logger.warning("No structured_response, attempting to extract from last message")
+                structured = self._extract_json_from_messages(result.get("messages", []))
+            
+            if not structured:
+                logger.error(f"Failed to extract structured response, result keys: {result.keys()}")
                 raise ValueError("No structured response from agent")
             
             # Build analysis dict
@@ -228,12 +225,44 @@ You MUST respond with structured output containing:
             return analysis
         
         except Exception as e:
-            logger.error(f"Failed to analyze anomaly with AI Agent: {e}, {result}")
-            return {
-                'anomaly_type': anomaly['type'],
-                'error': str(e),
-                'timestamp': int(time.time())
-            }
+            logger.error(f"Failed to analyze anomaly with AI Agent: {e}")
+            raise
+    
+    def _extract_json_from_messages(self, messages: list) -> Optional[Any]:
+        """Extracts JSON from markdown-wrapped content in messages.
+        
+        Args:
+            messages: List of messages from agent
+            
+        Returns:
+            Parsed AnomalyAnalysis object or None
+        """
+        import re
+        import json
+        from lwo.inference.agent_schemas import AnomalyAnalysis
+        
+        # Look for last AIMessage with content
+        for msg in reversed(messages):
+            if hasattr(msg, 'content') and msg.content:
+                content = msg.content.strip()
+                
+                # Try to extract JSON from markdown code block
+                json_match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', content, re.DOTALL)
+                if json_match:
+                    json_str = json_match.group(1).strip()
+                else:
+                    # Try parsing content directly
+                    json_str = content
+                
+                try:
+                    data = json.loads(json_str)
+                    # Create AnomalyAnalysis object from dict
+                    return AnomalyAnalysis(**data)
+                except (json.JSONDecodeError, TypeError, ValueError) as e:
+                    logger.debug(f"Failed to parse JSON from message: {e}")
+                    continue
+        
+        return None
     
     def _build_user_message(self, anomaly: Dict[str, Any]) -> str:
         """Build user message from anomaly context.

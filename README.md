@@ -62,9 +62,6 @@ uv sync
 createdb lwo
 createuser lwo_user
 
-# 设置环境变量
-export LWO_DB_PASSWORD="your_password"
-export OPENAI_API_KEY="sk-..."
 ```
 
 ### 4. 配置文件
@@ -102,54 +99,12 @@ uv run main.py daily
 uv run main.py stop
 ```
 
-## 配置示例
-
-`~/.config/lwo/lwo.toml`:
-```toml
-[general]
-data_dir = "~/.local/share/lwo"
-log_level = "INFO"
-
-[database]
-host = "localhost"
-port = 5432
-name = "lwo"
-user = "lwo_user"
-password = ""  # 从环境变量 LWO_DB_PASSWORD 读取
-
-[collectors]
-process_snapshot_interval = 60
-file_watch_extensions = [".py", ".js", ".ts", ".java", ".c", ".cpp", ".go", ".rs", ".md"]
-
-[openai]
-api_key = ""  # 从环境变量 OPENAI_API_KEY 读取
-model = "gpt-4o"
-base_url = "https://api.openai.com/v1"
-
-[reporting]
-daily_report_time = "18:00"
-report_output_dir = "~/lwo-reports"
-```
-
 ## 非功能特性
 
 - **极低开销**: CPU 占用 < 1%, 内存占用 < 100MB
 - **隐私安全**: 敏感信息自动脱敏,支持纯本地模式
 - **自动清理**: 每日自动轮转清理历史数据
 - **智能适应**: AI 自动学习用户工作模式,动态调整监控策略
-
-## 开发
-
-### 运行测试
-```bash
-uv add --dev pytest pytest-cov
-uv run pytest tests/ -v --cov=lwo
-```
-
-### 架构文档
-详细设计文档请查看:
-- [实现计划](docs/implementation_plan.md)
-- [架构说明](docs/architecture_notes.md)
 
 ## License
 

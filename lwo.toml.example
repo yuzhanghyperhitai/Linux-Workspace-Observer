@@ -1,3 +1,6 @@
+# LWO Configuration Example
+# Copy this to lwo.toml and customize
+
 [general]
 data_dir = "./log/data"
 log_level = "DEBUG"
@@ -21,3 +24,17 @@ model = "gemini-2.5-flash-lite"
 [reporting]
 daily_report_time = "18:00"
 report_output_dir = "./log/reports"
+
+[host_log]
+# Enable/disable host log monitoring
+enabled = true
+
+# Minimum log level to collect (INFO/WARNING/ERROR/CRITICAL)
+min_level = "WARNING"
+
+# Noise filtering patterns (regex)
+exclude_patterns = [
+    "DHCP.*renewal",
+    "CRON.*pam_unix",
+    "NetworkManager.*state changed",
+]

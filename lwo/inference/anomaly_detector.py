@@ -29,7 +29,7 @@ class AnomalyDetector:
         self.cooldown_seconds = 1800  # 30 minutes
     
     def check_repeated_command(self, lookback_seconds: int = 300) -> Optional[Dict[str, Any]]:
-        """Check if user is repeatedly executing the same command.
+        """Checks if user is repeatedly executing the same command.
         
         Args:
             lookback_seconds: Time window to check
@@ -51,6 +51,9 @@ class AnomalyDetector:
             
             if len(recent_commands) < 3:
                 return None
+            
+            # Get the most recent command
+            latest_command = recent_commands[0].sanitized_command or recent_commands[0].command
             
             # Count command repetitions
             command_counts = defaultdict(lambda: {'count': 0, 'pwds': set(), 'failed': []})
@@ -74,7 +77,12 @@ class AnomalyDetector:
             command, data = most_common
             count = data['count']
             
-            # Trigger if repeated 3+ times
+            # CRITICAL: Only trigger if the most recent command matches the repeated command
+            # This prevents triggering on old repetitions
+            if latest_command != command:
+                return None
+            
+            # Trigger if repeated 3+ times and currently repeating
             if count >= 3:
                 # Get working directory (prefer from failed commands, fallback to any pwd)
                 pwd = None
@@ -227,3 +235,58 @@ class AnomalyDetector:
             logger.info(f"Detected anomaly: {anomaly['type']}")
         
         return anomalies
+    
+    def check_host_errors(self, lookback_seconds: int = 300) -> Optional[Dict[str, Any]]:
+        """Checks for multiple host errors in short time.
+        
+        Args:
+            lookback_seconds: Time window to check
+            
+        Returns:
+            Anomaly context if detected, None otherwise
+        """
+        cutoff_time = int(time.time()) - lookback_seconds
+        
+        with self.db.session() as session:
+            from lwo.storage.models import HostLog
+            
+            # Query ERROR-level logs
+            error_logs = session.query(HostLog).filter(
+                HostLog.ts >= cutoff_time,
+                HostLog.level == 'ERROR'
+            ).order_by(HostLog.ts.desc()).limit(20).all()
+            
+            if len(error_logs) < 3:
+                return None
+            
+            # Count errors by service
+            service_counts = {}
+            for log in error_logs:
+                service_counts[log.service] = service_counts.get(log.service, 0) + 1
+            
+            # Trigger if same service has 3+ errors or total 5+ errors
+            max_service_errors = max(service_counts.values()) if service_counts else 0
+            total_errors = len(error_logs)
+            
+            if max_service_errors >= 3 or total_errors >= 5:
+                # Get most problematic service
+                problem_service = max(service_counts.items(), key=lambda x: x[1])[0] if service_counts else 'unknown'
+                
+                return {
+                    'type': 'host_errors',
+                    'error_count': total_errors,
+                    'problem_service': problem_service,
+                    'service_counts': service_counts,
+                    'recent_logs': [
+                        {
+                            'ts': log.ts,
+                            'service': log.service,
+                            'message': log.message
+                        }
+                        for log in error_logs[:5]
+                    ],
+                    'severity': 'high' if max_service_errors >= 5 else 'medium'
+                }
+        
+        return None
+

@@ -116,6 +116,7 @@ class Daemon: # Renamed from LWODaemon
         # Discover directories and start file monitor
         from lwo.collectors.directory_discovery import DirectoryDiscovery
         from lwo.collectors.file_monitor import FileMonitor
+        from lwo.collectors import create_log_collector
         
         discovery = DirectoryDiscovery()
         monitored_dirs = discovery.discover_directories(lookback_days=7, max_dirs=5)
@@ -126,6 +127,10 @@ class Daemon: # Renamed from LWODaemon
         else:
             logger.warning("No directories discovered, file monitoring disabled")
             self.file_monitor = None
+        
+        # Start host log collector
+        self.log_collector = create_log_collector(self.config)
+        await self.log_collector.start()
         
         logger.info("All collectors started")
     
@@ -145,6 +150,11 @@ class Daemon: # Renamed from LWODaemon
         # Stop file monitor
         if hasattr(self, 'file_monitor') and self.file_monitor:
             await self.file_monitor.stop()
+        
+        # Stop log collector
+        if hasattr(self, 'log_collector') and self.log_collector:
+            logger.info("Stop log collector...")
+            await self.log_collector.stop()
         
         # Stop shell hook receiver
         if hasattr(self, 'shell_hook_receiver') and self.shell_hook_receiver:
