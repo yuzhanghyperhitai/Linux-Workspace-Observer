@@ -1,6 +1,3 @@
-# LWO Configuration Example
-# Copy this to lwo.toml and customize
-
 [general]
 data_dir = "./log/data"
 log_level = "DEBUG"
@@ -10,15 +7,15 @@ host = "localhost"
 port = 5432
 name = "lwo"
 user = "postgres"
-# Password can be set here or via LWO_DB_PASSWORD environment variable
-# password = "your-password-here"
+password = "postgres"
 
 [collectors]
 process_snapshot_interval = 60
+# file_watch_dirs are automatically discovered by AI
+file_watch_extensions = [".py", ".js", ".ts", ".java", ".c", ".cpp", ".go", ".rs", ".md", ".toml", ".yaml", ".json"]
 
 [ai]
-# Google Gemini configuration
-api_key = "your-google-api-key-here"
+api_key = "AIxxxx"
 model = "gemini-2.5-flash-lite"
 
 [reporting]
@@ -30,7 +27,7 @@ report_output_dir = "./log/reports"
 enabled = true
 
 # Minimum log level to collect (INFO/WARNING/ERROR/CRITICAL)
-min_level = "WARNING"
+min_level = "ERROR"
 
 # Noise filtering patterns (regex)
 exclude_patterns = [

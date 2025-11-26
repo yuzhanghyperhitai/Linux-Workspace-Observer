@@ -234,6 +234,12 @@ class AnomalyDetector:
             anomalies.append(anomaly)
             logger.info(f"Detected anomaly: {anomaly['type']}")
         
+        # Check host errors
+        anomaly = self.check_host_errors()
+        if anomaly and self.should_trigger(anomaly['type']):
+            anomalies.append(anomaly)
+            logger.info(f"Detected anomaly: {anomaly['type']}")
+        
         return anomalies
     
     def check_host_errors(self, lookback_seconds: int = 300) -> Optional[Dict[str, Any]]:

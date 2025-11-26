@@ -70,46 +70,26 @@ class ShellHookReceiver:
             data: Command data dict with keys: command, pwd, ts, duration, exit_code
         """
         try:
-            command = data.get('command', '')
-            pwd = data.get('pwd', '')
-            ts = data.get('ts', int(time.time()))
-            duration = data.get('duration', 0.0)
-            exit_code = data.get('exit_code', 0)
-            
             # Sanitize command
-            sanitized_command = self.sanitizer.sanitize_command(command)
+            sanitized_command = self.sanitizer.sanitize_command(data.get('command', ''))
             
             # Insert into database
             self.db.insert_shell_command(
-                command=command,
+                command=data['command'],
                 sanitized_command=sanitized_command,
-                pwd=pwd,
-                ts=ts,
-                duration=duration,
-                exit_code=exit_code
+                pwd=data['pwd'],
+                ts=data['ts'],
+                duration=data['duration'],
+                exit_code=data['exit_code']
             )
             
             # Check Git context on PWD change
-            self.git_collector.on_pwd_change(pwd)
+            self.git_collector.on_pwd_change(data.get('pwd', ''))
             
-            logger.debug(f"Recorded command: {sanitized_command} (exit={exit_code})")
+            logger.debug(f"Recorded command: {sanitized_command[:50]}...")
             
-            # Trigger anomaly detection (event-driven)
-            await self._check_anomalies()
-        
         except Exception as e:
             logger.error(f"Failed to process command data: {e}")
-    
-    async def _check_anomalies(self):
-        """Check for anomalies after receiving command."""
-        try:
-            # Get daemon instance to access anomaly monitor
-            from lwo.daemon import Daemon
-            daemon = Daemon.get_instance()
-            if daemon and hasattr(daemon, 'anomaly_monitor'):
-                await daemon.anomaly_monitor.on_command_received()
-        except Exception as e:
-            logger.debug(f"Anomaly check skipped: {e}")
     
     async def start(self):
         """Start the Unix socket server."""

@@ -1,110 +1,119 @@
 # Linux Workspace Observer (LWO)
 
-一款运行在 Linux 后台的**无头（Headless）智能助理**。通过采集系统底层信号与开发工具链状态,使用 OpenAI Agent 推理用户的**工作意图**,并输出**结构化简报**。
+A **headless intelligent assistant** running in the background on Linux.
+It collects low‑level system signals and development toolchain states,
+uses an OpenAI Agent to infer the user's **work intent**, and outputs
+**structured summaries**.
 
-## 核心功能
+## Core Features
 
-### 数据采集
-- **Shell Hook**: 捕获命令内容、执行目录、耗时及退出码
-- **进程监控**: 每 60s 识别活跃的"重量级"进程（IDE、Docker、编译器）
-- **Git 上下文**: 自动检测 Git 仓库,记录分支意图（如 `fix/`, `feat/`）
-- **文件监控**: 智能发现项目目录并监控文件变化（基于 inotify）
+### Data Collection
 
-### 智能分析
-- **OpenAI Agent**: 使用 GPT-4o 分析工作状态
-- **自动推理**: 识别当前状态（Coding/Debugging/Learning/Idle）
-- **智能目录发现**: AI 自动分析并推荐需要监控的项目目录
+-   **Shell Hook**: Captures command content, working directory,
+    execution time, and exit code\
+-   **Process Monitoring**: Identifies active "heavy" processes (IDE,
+    Docker, compilers) every 60 seconds\
+-   **Git Context**: Automatically detects Git repositories and records
+    branch intent (e.g., `fix/`, `feat/`)\
+-   **File Monitoring**: Intelligently discovers project directories and
+    monitors file changes (based on inotify)
 
-### 隐私保护
-- **敏感信息脱敏**: 自动过滤密码、API Key、邮箱等
-- **数据保留策略**: 原始数据保留 7 天,聚合数据保留 30 天
+### Intelligent Analysis
 
-## 架构
+-   **OpenAI Agent**: Uses Gemini to analyze work status\
+-   **Automatic Inference**: Identifies current state (Coding /
+    Debugging / Learning / Idle)\
+-   **Smart Directory Discovery**: AI automatically analyzes and
+    recommends project directories to monitor
 
-```
-lwo/
-├── collectors/     # 数据采集层
-│   ├── shell_hook.py      # Shell 命令捕获
-│   ├── process_snapshot.py # 进程监控
-│   ├── git_context.py     # Git 上下文
-│   └── file_pulse.py      # 文件监控
-├── processors/     # 数据处理层
-│   ├── sanitizer.py       # 敏感信息脱敏
-│   └── aggregator.py      # 事件聚合
-├── inference/      # 智能分析层
-│   ├── openai_agent.py    # OpenAI Agent 客户端
-│   └── analyzer.py        # 状态分析器
-├── storage/        # 存储层（PostgreSQL）
-│   ├── database.py
-│   └── schema.sql
-└── cli/            # 交互层
-    ├── commands.py
-    └── reporter.py
-```
+### Privacy Protection
 
-## 安装
+-   **Sensitive Data Redaction**: Automatically filters passwords, API
+    keys, emails, etc.\
+-   **Data Retention Policy**: Raw data retained for 7 days; aggregated
+    data retained for 30 days
 
-### 1. 克隆项目
-```bash
+## Installation
+
+### 1. Clone the Project
+
+``` bash
 git clone <repository-url>
 cd lwo
 ```
 
-### 2. 安装依赖
-```bash
-# 项目使用 uv 管理依赖
+### 2. Install Dependencies
+
+``` bash
+# The project uses uv to manage dependencies
 uv sync
 ```
 
-### 3. 配置数据库
-```bash
-# 创建 PostgreSQL 数据库
-createdb lwo
-createuser lwo_user
+### 3. Configure the Database
 
+``` bash
+# Create a PostgreSQL database
+createdb lwo
 ```
 
-### 4. 配置文件
-复制配置模板并编辑:
-```bash
-mkdir -p ~/.config/lwo
+### 4. Edit Configuration File
+
+Copy the template and modify:
+
+``` bash
 cp config/lwo.toml.example ~/.config/lwo/lwo.toml
 ```
 
-### 5. 安装 Shell Hook
-```bash
-bash scripts/install.sh
-source ~/.zshrc  # 或 ~/.bashrc
+## Usage
+
+### Start the Daemon
+
+``` bash
+source dev.sh
+uv run main.py start & 
+
+# e.g.: cat not exist file.
+# cat xxx.py
+# cat xxx.py
+# cat xxx.py
 ```
+![image](./image.png)
 
-## 使用
+### View Current Work Summary
 
-### 启动守护进程
-```bash
-uv run main.py start
+``` bash
+uv run main.py report --hours 8
 ```
-
-### 查看当前工作简报
-```bash
-uv run main.py report
 ```
+📊 ACTIVITY STATISTICS
+----------------------------------------------------------------------
+Commands executed: 52 (26 failed)
+Directories: 1
+Files modified: 35
+Languages: py(12), md(12), json(10), toml(1)
 
-### 生成每日日报
-```bash
+🌿 Git: main (other)
+
+⚠️  Host errors: 133
+
+----------------------------------------------------------------------
+🤖 AI SUMMARY
+----------------------------------------------------------------------
+The developer was actively working on a project, likely involving Python, Markdown, and JSON files, ...
+
+======================================================================
+```
+### Generate Daily Report
+
+``` bash
 uv run main.py daily
 ```
 
-### 停止守护进程
-```bash
+### Stop the Daemon
+
+``` bash
 uv run main.py stop
 ```
-
-## 非功能特性
-
-- **极低开销**: CPU 占用 < 1%, 内存占用 < 100MB
-- **隐私安全**: 敏感信息自动脱敏,支持纯本地模式
-- **自动清理**: 每日自动轮转清理历史数据
-- **智能适应**: AI 自动学习用户工作模式,动态调整监控策略
 
 ## License
 

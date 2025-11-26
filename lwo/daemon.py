@@ -132,7 +132,31 @@ class Daemon: # Renamed from LWODaemon
         self.log_collector = create_log_collector(self.config)
         await self.log_collector.start()
         
+        # Start periodic anomaly detection (every 30 seconds)
+        asyncio.create_task(self._periodic_anomaly_check())
+        
         logger.info("All collectors started")
+    
+    async def _periodic_anomaly_check(self):
+        """Runs periodic anomaly detection checks.
+        
+        Executes every 30 seconds to detect various anomalies including:
+        - Repeated commands
+        - High error rate
+        - File thrashing
+        - Host errors
+        """
+        # Wait for initial startup
+        await asyncio.sleep(10)
+        
+        while True:
+            try:
+                await self.anomaly_monitor.run()
+            except Exception as e:
+                logger.error(f"Periodic anomaly check failed: {e}")
+            
+            # Wait 30 seconds before next check
+            await asyncio.sleep(30)
     
     async def stop_collectors(self):
         """Stop all data collectors."""

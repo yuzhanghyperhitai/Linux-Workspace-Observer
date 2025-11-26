@@ -89,7 +89,7 @@ class AIAgentIntervention:
             raise ValueError("AI API key not configured. Please set 'api_key' in [ai] section of config file.")
         
         # Initialize Gemini model
-        llm = init_chat_model(
+        self.llm = init_chat_model(
             f"google_genai:{model}",
             api_key=api_key,
             temperature=0.3
@@ -103,7 +103,7 @@ class AIAgentIntervention:
         
         # Create Agent with structured output and verbose logging
         self.agent = create_agent(
-            model=llm,
+            model=self.llm,
             tools=AGENT_TOOLS,
             response_format=ToolStrategy(AnomalyAnalysis),
             system_prompt=system_prompt

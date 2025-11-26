@@ -13,10 +13,10 @@ logger = setup_logger(__name__)
 
 
 class AnomalyMonitor:
-    """Monitor for anomalies and trigger AI intervention."""
+    """Monitors for anomalies and triggers AI intervention."""
     
     def __init__(self):
-        """Initialize anomaly monitor."""
+        """Initializes anomaly monitor."""
         self.config = get_config()
         self.detector = AnomalyDetector()
         self.ai_agent = AIAgentIntervention()
@@ -24,62 +24,26 @@ class AnomalyMonitor:
         
         logger.info("AI Agent intervention system initialized")
     
-    async def on_command_received(self):
-        """Called when a new shell command is received.
-        
-        Checks for command-related anomalies and triggers AI if needed.
-        """
-        try:
-            # Check for repeated commands
-            anomaly = self.detector.check_repeated_command()
-            if anomaly:
-                await self._trigger_intervention(anomaly)
-            
-            # Check for high error rate
-            anomaly = self.detector.check_high_error_rate()
-            if anomaly:
-                await self._trigger_intervention(anomaly)
-        
-        except Exception as e:
-            logger.error(f"Error checking command anomalies: {e}")
-    
     async def run(self):
         """Runs periodic anomaly detection.
         
-        This method is called periodically to check for various anomalies.
+        Checks all anomaly types and triggers AI intervention if needed.
+        This is the unified entry point for anomaly detection.
+        All checks include cooldown protection to prevent duplicate analysis.
         """
         try:
-            # Check for anomalies
+            # Run all detection checks (includes cooldown for each type)
             anomalies = self.detector.detect_anomalies()
             
-            # Check for host errors
-            host_error_anomaly = self.detector.check_host_errors()
-            if host_error_anomaly:
-                anomalies.append(host_error_anomaly)
-            
-            # Trigger interventions
+            # Trigger interventions for detected anomalies
             for anomaly in anomalies:
                 await self._trigger_intervention(anomaly)
         
         except Exception as e:
             logger.error(f"Error in anomaly detection cycle: {e}")
     
-    async def on_file_event(self):
-        """Called when a file event is detected.
-        
-        Checks for file-related anomalies and triggers AI if needed.
-        """
-        try:
-            # Check for file thrashing
-            anomaly = self.detector.check_file_thrashing()
-            if anomaly:
-                await self._trigger_intervention(anomaly)
-        
-        except Exception as e:
-            logger.error(f"Error checking file anomalies: {e}")
-    
     async def _trigger_intervention(self, anomaly: dict):
-        """Trigger AI intervention for an anomaly.
+        """Triggers AI intervention for an anomaly.
         
         Args:
             anomaly: Anomaly context
@@ -97,13 +61,13 @@ class AnomalyMonitor:
             logger.error(f"Failed to trigger intervention: {e}")
     
     async def _run_analysis(self, anomaly: dict):
-        """Run AI analysis in background.
+        """Runs AI analysis in background.
         
         Args:
             anomaly: Anomaly context
         """
         try:
-            analysis = await self.ai_agent.analyze_anomaly(anomaly) # Changed from self.agent_intervention to self.ai_agent
+            analysis = await self.ai_agent.analyze_anomaly(anomaly)
             
             # Save intervention to database
             self.ai_agent.save_intervention(anomaly, analysis)
@@ -123,7 +87,7 @@ class AnomalyMonitor:
             logger.error(f"Failed to complete AI analysis: {e}")
     
     def _send_notification(self, analysis: Dict[str, Any]):
-        """Send desktop notification for AI analysis.
+        """Sends desktop notification for AI analysis.
         
         Args:
             analysis: AI analysis result
@@ -135,7 +99,7 @@ class AnomalyMonitor:
         title = "⚠️  LWO Alert"
         
         # Build concise message
-        issue = analysis.get ('issue', 'Anomaly detected')
+        issue = analysis.get('issue', 'Anomaly detected')
         confidence = analysis.get('confidence', 0.0)
         
         message = f"{issue}\n"

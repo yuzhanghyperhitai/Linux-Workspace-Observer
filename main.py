@@ -25,9 +25,10 @@ def stop():
 
 
 @cli.command()
-def report():
+@click.option('--hours', default=4, help='Hours to look back (default: 4)')
+def report(hours):
     """Display current work status report."""
-    report_command()
+    report_command(hours=hours)
 
 
 @cli.command()
